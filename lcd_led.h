@@ -8,8 +8,8 @@
 //#define SLON
 //#define FREZA
 //#define	LATON
-//#define	LL_CUBEMX
-#define	HAL_CUBEMX
+#define		LL_CUBEMX
+//#define		HAL_CUBEMX
 
 //#ifdef	LATON
 #define		RESET_LCD		0
@@ -48,7 +48,7 @@
 
 
 void	delay(uint32_t units);
-void		delay_ms_init(void);
+void		delay_init(void);
 void 		delay_ms(uint16_t ms);		//based on timer
 void 		delay_us(uint16_t us);		//based on timer
 void		WEH1602_wr_instr(uint8_t instruction);

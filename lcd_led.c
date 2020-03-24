@@ -3,56 +3,50 @@
 #include "main.h"
 
 
+uint16_t	psc_ms, psc_us;
 
-void	delay_ms_init(void)
+
+void	delay_init(void)
 {
-//	RCC->APB1ENR |= RCC_APB1ENR_TIM2EN;
-//	TIM2->CR1 |= TIM_CR1_OPM;
+//	RCC->APB2ENR |= RCC_APB2ENR_TIM16EN;			//init not from cube	
+//	TIM16->CR1 |= TIM_CR1_OPM;								//
 	SystemCoreClockUpdate();								//system clock must be <= 65MHz
-	TIM2->PSC = SystemCoreClock/1000 - 1;		//
-	TIM2->EGR |= TIM_EGR_UG;
-	while( !(TIM2->SR & TIM_SR_UIF) )
+	psc_ms = SystemCoreClock/1000 - 1;	
+	psc_us = SystemCoreClock/1000000 - 1;
+	TIM16->EGR |= TIM_EGR_UG;
+	while( !(TIM16->SR & TIM_SR_UIF) )
 		;
-	TIM2->SR &= ~TIM_SR_UIF;
+	TIM16->SR &= ~TIM_SR_UIF;
 }
 
 void	delay_ms(uint16_t ms)
 {
-	TIM2->ARR = ms;
-	TIM2->CR1 |= TIM_CR1_CEN;
-	while( !(TIM2->SR & TIM_SR_UIF) )
+	TIM16->PSC = psc_ms;
+	TIM16->ARR = ms;
+	TIM16->CR1 |= TIM_CR1_CEN;
+	while( !(TIM16->SR & TIM_SR_UIF) )
 		;
-	TIM2->SR &= ~TIM_SR_UIF;
+	TIM16->SR &= ~TIM_SR_UIF;
 }
 
 void 	delay_us(uint16_t us)
 {
-	uint16_t prsc;
-	
-	SystemCoreClockUpdate();
-	prsc = SystemCoreClock/1000000 - 1;
-	TIM3->PSC = prsc;
-	
-	TIM3->ARR = us;
-	TIM3->CR1 |= TIM_CR1_CEN;
-	while( !(TIM3->SR & TIM_SR_UIF) );
-	TIM3->SR &= ~TIM_SR_UIF;
+	TIM16->PSC = psc_us;
+	TIM16->ARR = us;
+	TIM16->CR1 |= TIM_CR1_CEN;
+	while( !(TIM16->SR & TIM_SR_UIF) )
+		;
+	TIM16->SR &= ~TIM_SR_UIF;
 }
 
 void	WEH1602_E_strobe(void)
 {
-	uint16_t tmp;
-	//delay(1000);		// ~1.5ms
-	//delay_ms(2);
-	//for(uint16_t i=10; i>0; i--)	;
+	//uint16_t tmp;
 	SystemCoreClockUpdate();
-	tmp = SystemCoreClock/1000000*3;		//3-6us
-	for(uint16_t i=0; i<tmp; i++)	;
+	//tmp = SystemCoreClock/1000000*3;		//3-6us
 	WEH1602_E(SET_LCD);
-	//delay(1000);		// ~1.5ms
-	//delay_ms(2);
-	//for(uint16_t i=10; i>0; i--)	;
-	for(uint16_t i=0; i<tmp; i++)	;
+	//for(uint16_t i=0; i<tmp; i++)	;
+	delay_us(1);
 	WEH1602_E(RESET_LCD);
 }
 
@@ -386,8 +380,6 @@ void	WEH1602_wr_data(uint8_t data)
 		
 		WEH1602_E_strobe();
 }
-
-
 
 void WEH1602_RS(uint8_t set_reset)
 {
