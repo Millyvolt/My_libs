@@ -1,9 +1,17 @@
 
 #include "lcd_led.h"
-#include "main.h"
+//#include "main.h"
 
 
+
+uint8_t	buf;
 uint16_t	psc_ms, psc_us;
+
+#ifdef		LCD_I2C_2004
+extern		I2C_HandleTypeDef 	hi2c1;
+extern		uint8_t				address;
+extern		enum 	Screen_state	screen_state;
+#endif		//LCD_I2C_2004
 
 
 void	delay_init(void)
@@ -13,32 +21,33 @@ void	delay_init(void)
 	SystemCoreClockUpdate();								//system clock must be <= 65MHz
 	psc_ms = SystemCoreClock/1000 - 1;	
 	psc_us = SystemCoreClock/1000000 - 1;
-	TIM16->EGR |= TIM_EGR_UG;
-	while( !(TIM16->SR & TIM_SR_UIF) )
+	TIM3->EGR |= TIM_EGR_UG;
+	while( !(TIM3->SR & TIM_SR_UIF) )
 		;
-	TIM16->SR &= ~TIM_SR_UIF;
+	TIM3->SR &= ~TIM_SR_UIF;
 }
 
 void	delay_ms(uint16_t ms)
 {
-	TIM16->PSC = psc_ms;
-	TIM16->ARR = ms;
-	TIM16->CR1 |= TIM_CR1_CEN;
-	while( !(TIM16->SR & TIM_SR_UIF) )
+	TIM3->PSC = psc_ms;
+	TIM3->ARR = ms;
+	TIM3->CR1 |= TIM_CR1_CEN;
+	while( !(TIM3->SR & TIM_SR_UIF) )
 		;
-	TIM16->SR &= ~TIM_SR_UIF;
+	TIM3->SR &= ~TIM_SR_UIF;
 }
 
 void 	delay_us(uint16_t us)
 {
-	TIM16->PSC = psc_us;
-	TIM16->ARR = us;
-	TIM16->CR1 |= TIM_CR1_CEN;
-	while( !(TIM16->SR & TIM_SR_UIF) )
+	TIM3->PSC = psc_us;
+	TIM3->ARR = us;
+	TIM3->CR1 |= TIM_CR1_CEN;
+	while( !(TIM3->SR & TIM_SR_UIF) )
 		;
-	TIM16->SR &= ~TIM_SR_UIF;
+	TIM3->SR &= ~TIM_SR_UIF;
 }
 
+#ifdef	LCD_LED_1604
 void	WEH1602_E_strobe(void)
 {
 	//uint16_t tmp;
@@ -602,6 +611,119 @@ void	HD44780_init(void)		//for proteus model LM016L
 	WEH1602_E_strobe();
 
 }
+#endif	//LCD_LED_1604
+
+#ifdef	LCD_I2C_2004
+
+void	display_2004_i2c_init(I2C_HandleTypeDef *hi2c)
+{
+	delay_ms(200);
+	buf = D5_I2C|D4_I2C;
+	HAL_I2C_IsDeviceReady(hi2c, address, 5, 1000);
+	
+	HAL_I2C_Master_Transmit(hi2c, address, &buf, 1, 1000);
+	E_pulse(hi2c);
+	delay_ms(10);
+	HAL_I2C_Master_Transmit(hi2c, address, &buf, 1, 1000);
+	E_pulse(hi2c);
+	delay_ms(2);
+	HAL_I2C_Master_Transmit(hi2c, address, &buf, 1, 1000);
+	E_pulse(hi2c);
+	delay_ms(2);
+	
+	buf = D5_I2C;
+	HAL_I2C_Master_Transmit(hi2c, address, &buf, 1, 1000);
+	E_pulse(hi2c);
+	delay_ms(2);
+	
+	HAL_I2C_Master_Transmit(hi2c, address, &buf, 1, 1000);
+	E_pulse(hi2c);
+	buf = D7_I2C;
+	HAL_I2C_Master_Transmit(hi2c, address, &buf, 1, 1000);
+	E_pulse(hi2c);
+	delay_ms(2);
+	
+	buf = 0;
+	HAL_I2C_Master_Transmit(hi2c, address, &buf, 1, 1000);
+	E_pulse(hi2c);
+	buf = D7_I2C;
+	HAL_I2C_Master_Transmit(hi2c, address, &buf, 1, 1000);
+	E_pulse(hi2c);
+	delay_ms(2);
+	
+	buf = 0;															//clear display
+	HAL_I2C_Master_Transmit(hi2c, address, &buf, 1, 1000);
+	E_pulse(hi2c);
+	buf = D4_I2C;
+	HAL_I2C_Master_Transmit(hi2c, address, &buf, 1, 1000);
+	E_pulse(hi2c);
+	delay_ms(5);
+	
+	buf = 0;															//entry mode set
+	HAL_I2C_Master_Transmit(hi2c, address, &buf, 1, 1000);
+	E_pulse(hi2c);
+	buf = D6_I2C|D5_I2C;
+	HAL_I2C_Master_Transmit(hi2c, address, &buf, 1, 1000);
+	E_pulse(hi2c);
+	delay_ms(2);
+	
+	buf = 0;															//display on
+	HAL_I2C_Master_Transmit(hi2c, address, &buf, 1, 1000);
+	E_pulse(hi2c);
+	buf = D7_I2C|D6_I2C;		//|D5_I2C|D4_I2C;						//no cursor
+	HAL_I2C_Master_Transmit(hi2c, address, &buf, 1, 1000);
+	E_pulse(hi2c);
+	delay_ms(2);
+	
+	buf = LED_I2C;												//led on
+	HAL_I2C_Master_Transmit(hi2c, address, &buf, 1, 1000);
+}
+
+void	E_pulse(I2C_HandleTypeDef *hi2c)
+{
+	buf |= E_I2C;
+	HAL_I2C_Master_Transmit(hi2c, address, &buf, 1, 1000);
+	delay_ms(1);
+	buf &= ~E_I2C;
+	HAL_I2C_Master_Transmit(hi2c, address, &buf, 1, 1000);
+}
+
+void	write_data_i2c(I2C_HandleTypeDef *hi2c, uint8_t data)
+{
+	if(screen_state==SCREEN_OFF)
+		buf = (data&0xF0)|RS_I2C;
+	else
+		buf = (data&0xF0)|RS_I2C|LED_I2C;
+	HAL_I2C_Master_Transmit(hi2c, address, &buf, 1, 1000);
+	E_pulse(hi2c);
+	if(screen_state==SCREEN_OFF)
+		buf = (data<<4)|RS_I2C;
+	else
+		buf = (data<<4)|RS_I2C|LED_I2C;
+	HAL_I2C_Master_Transmit(hi2c, address, &buf, 1, 1000);
+	E_pulse(hi2c);
+	delay_ms(1);
+}
+
+void		write_cmd_i2c(I2C_HandleTypeDef *hi2c, uint8_t command)
+{
+	if(screen_state==SCREEN_OFF)
+		buf = command&0xF0;
+	else
+		buf = (command&0xF0)|LED_I2C;
+	HAL_I2C_Master_Transmit(hi2c, address, &buf, 1, 1000);
+	E_pulse(hi2c);
+	if(screen_state==SCREEN_OFF)
+		buf = command<<4;
+	else
+		buf = (command<<4)|LED_I2C;
+	HAL_I2C_Master_Transmit(hi2c, address, &buf, 1, 1000);
+	E_pulse(hi2c);
+	delay_ms(1);
+}
+
+#endif	//LCD_I2C_2004
+
 
 //void WEH1602_readBF(void)
 //{
