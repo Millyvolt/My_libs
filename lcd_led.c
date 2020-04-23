@@ -16,35 +16,49 @@ extern		enum 	Screen_state	screen_state;
 
 void	delay_init(void)
 {
-//	RCC->APB2ENR |= RCC_APB2ENR_TIM16EN;			//init not from cube	
-//	TIM16->CR1 |= TIM_CR1_OPM;								//
-	SystemCoreClockUpdate();								//system clock must be <= 65MHz
-	psc_ms = SystemCoreClock/1000 - 1;	
+	RCC->APB1ENR |= RCC_APB1ENR_TIM2EN;		//init not from cube
+	TIM2->CR1 |= TIM_CR1_OPM;				//
+	SystemCoreClockUpdate();
+	psc_ms = SystemCoreClock/10/1000 - 1;			//system clock must be < 650MHz
 	psc_us = SystemCoreClock/1000000 - 1;
-	TIM3->EGR |= TIM_EGR_UG;
-	while( !(TIM3->SR & TIM_SR_UIF) )
+	TIM2->EGR |= TIM_EGR_UG;
+	while( !(TIM2->SR & TIM_SR_UIF) )
 		;
-	TIM3->SR &= ~TIM_SR_UIF;
+	TIM2->SR &= ~TIM_SR_UIF;
+	while( TIM2->SR & TIM_SR_UIF )
+		;
 }
 
 void	delay_ms(uint16_t ms)
 {
-	TIM3->PSC = psc_ms;
-	TIM3->ARR = ms;
-	TIM3->CR1 |= TIM_CR1_CEN;
-	while( !(TIM3->SR & TIM_SR_UIF) )
+	TIM2->PSC = psc_ms;
+	TIM2->EGR |= TIM_EGR_UG;
+	while( !(TIM2->SR & TIM_SR_UIF) )
 		;
-	TIM3->SR &= ~TIM_SR_UIF;
+	TIM2->SR &= ~TIM_SR_UIF;
+	while( TIM2->SR & TIM_SR_UIF )
+		;
+	TIM2->ARR = ms*10;
+	TIM2->CR1 |= TIM_CR1_CEN;
+	while( !(TIM2->SR & TIM_SR_UIF) )
+		;
+	TIM2->SR &= ~TIM_SR_UIF;
 }
 
 void 	delay_us(uint16_t us)
 {
-	TIM3->PSC = psc_us;
-	TIM3->ARR = us;
-	TIM3->CR1 |= TIM_CR1_CEN;
-	while( !(TIM3->SR & TIM_SR_UIF) )
+	TIM2->PSC = psc_us;
+	TIM2->EGR |= TIM_EGR_UG;
+	while( !(TIM2->SR & TIM_SR_UIF) )
 		;
-	TIM3->SR &= ~TIM_SR_UIF;
+	TIM2->SR &= ~TIM_SR_UIF;
+	while( TIM2->SR & TIM_SR_UIF )
+		;
+	TIM2->ARR = us;
+	TIM2->CR1 |= TIM_CR1_CEN;
+	while( !(TIM2->SR & TIM_SR_UIF) )
+		;
+	TIM2->SR &= ~TIM_SR_UIF;
 }
 
 #ifdef	LCD_LED_1604
