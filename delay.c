@@ -1,12 +1,8 @@
 
+#include "delay.h"
 
 
 uint16_t	psc_ms, psc_us;
-
-
-void	delay_init(void);
-void	delay_ms(uint16_t ms);
-void	delay_us(uint16_t us);
 
 
 void	delay_init(void)
